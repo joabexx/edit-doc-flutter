@@ -1,13 +1,17 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/services/banco_local_service.dart';
+import '../models/services/preferences_service.dart';
 import '../models/usuario.dart';
 import '../utils/validadores.dart';
 
 class AuthViewModel extends ChangeNotifier {
-  AuthViewModel({required BancoLocalService banco}) : _banco = banco;
+  AuthViewModel({required BancoLocalService banco, required PreferencesService preferences})
+      : _banco = banco,
+        _preferences = preferences;
 
   final BancoLocalService _banco;
+  final PreferencesService _preferences;
   Usuario? _usuarioAtual;
   bool _carregando = false;
   bool _temaEscuro = false;
@@ -17,10 +21,29 @@ class AuthViewModel extends ChangeNotifier {
   bool get carregando => _carregando;
   bool get temaEscuro => _temaEscuro;
   String? get erro => _erro;
+  bool get autenticado => _usuarioAtual != null;
 
-  void alternarTema(bool escuro) {
+  Future<void> inicializar() async {
+    _temaEscuro = await _preferences.carregarTema();
+    final id = await _preferences.carregarSessao();
+    if (id != null) {
+      _usuarioAtual = await _banco.buscarPorId(id);
+      if (_usuarioAtual == null) await _preferences.limparSessao();
+    }
+    notifyListeners();
+  }
+
+  Future<void> alternarTema(bool escuro) async {
+    final anterior = _temaEscuro;
     _temaEscuro = escuro;
     notifyListeners();
+    try {
+      await _preferences.salvarTema(escuro);
+    } catch (_) {
+      _temaEscuro = anterior;
+      _erro = 'Falha ao salvar tema.';
+      notifyListeners();
+    }
   }
 
   Future<bool> entrar({required String email, required String senha}) async {
@@ -37,6 +60,7 @@ class AuthViewModel extends ChangeNotifier {
         _erro = 'E-mail ou senha incorretos.';
         return false;
       }
+      await _preferences.salvarSessao(usuario.id);
       _usuarioAtual = usuario;
       return true;
     } catch (_) {
@@ -72,7 +96,8 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  void sair() {
+  Future<void> sair() async {
+    await _preferences.limparSessao();
     _usuarioAtual = null;
     notifyListeners();
   }

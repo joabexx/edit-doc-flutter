@@ -1,57 +1,42 @@
 # Relatório de Migração Arquitetural — Fase 1
 
-**Projeto:** Edit Doc Flutter  
-**Arquitetura:** MVVM (Model–View–ViewModel)  
-**Escopo:** Login, Cadastro e Home/Lista; sem CRUD persistente.  
+Este relatório descreve **o primeiro marco entregue**. Mantê-lo no repositório da Fase 2 permite comprovar a sequência exigida pelo professor, mas a comprovação final depende do histórico real de commits do GitHub.
 
-> **Nota de fidelidade:** o código original do DartPad não foi fornecido junto a esta versão de referência. O mapeamento abaixo corresponde às classes realmente presentes nesta implementação e demonstra onde as responsabilidades de um protótipo monolítico foram posicionadas. Antes da entrega acadêmica, compare com os nomes e recursos exatos do seu código DartPad e ajuste quaisquer diferenças. Não apresente a migração como idêntica sem essa conferência.
+> O código monolítico original do DartPad não foi fornecido para comparação. O mapeamento documenta a implementação de referência da Fase 1. Ajuste descrições caso o código original tenha nomes ou comportamentos diferentes.
 
-## 1. Mapeamento de classes, widgets e funções
+## 1. Mapeamento das responsabilidades
 
-| Responsabilidade anteriormente concentrada no DartPad | Classe/função nesta versão | Destino |
-|---|---|---|
-| Entrada e configuração da aplicação | `main()`, `EditDocApp` | `lib/main.dart` |
-| Dados de cadastro e login | `Usuario` | `lib/models/usuario.dart` |
-| Dados de um documento de demonstração | `Documento` | `lib/models/documento.dart` |
-| Armazenamento temporário dos usuários | `BancoLocalService` | `lib/models/services/banco_local_service.dart` |
-| Controle de login/cadastro, carregamento, erro e tema | `AuthViewModel` | `lib/viewmodels/auth_viewmodel.dart` |
-| Exibição reativa da lista demonstrativa | `DocumentosViewModel` | `lib/viewmodels/documentos_viewmodel.dart` |
-| Formulário de login | `LoginView` | `lib/views/login_view.dart` |
-| Formulário de cadastro | `CadastroView` | `lib/views/cadastro_view.dart` |
-| Home com lista de documentos de exemplo | `HomeView` | `lib/views/home_view.dart` |
-| Validações de nome, e-mail e senha | `Validadores` | `lib/utils/validadores.dart` |
-| Estrutura futura de preferências | `PreferencesService` (reservado) | `lib/models/services/preferences_service.dart` |
-| Estrutura futura do editor | `EditorView` (reservado) | `lib/views/editor_view.dart` |
+| Elemento | Fase 1: localização MVVM |
+|---|---|
+| Inicialização, `EditDocApp`, tema e rotas | `lib/main.dart` |
+| `Usuario` | `lib/models/usuario.dart` |
+| `Documento` (exemplo de leitura) | `lib/models/documento.dart` |
+| `BancoLocalService` (usuarios em memória) | `lib/models/services/banco_local_service.dart` |
+| `AuthViewModel` (login, cadastro, tema, sessão em memória) | `lib/viewmodels/auth_viewmodel.dart` |
+| `DocumentosViewModel` (lista demonstrativa) | `lib/viewmodels/documentos_viewmodel.dart` |
+| `LoginView` | `lib/views/login_view.dart` |
+| `CadastroView` | `lib/views/cadastro_view.dart` |
+| `HomeView` | `lib/views/home_view.dart` |
+| `Validadores` (nome, e-mail, senha) | `lib/utils/validadores.dart` |
+| `PreferencesService` e `EditorView` | Reservados para a Etapa 5 |
 
-## 2. Alterações de estrutura e imports
+## 2. Adaptações e imports
 
-- O arquivo único foi separado por responsabilidade: **Model** representa entidades e acesso a dados, **View** compõe widgets, **ViewModel** concentra estado e regras, e **utils** contém validações reutilizáveis.
-- Cada classe pública passou a ser importada somente onde é usada, com imports relativos entre pastas e imports de `package:flutter/...` para widgets e `ChangeNotifier`.
-- O construtor de `AuthViewModel` recebe `BancoLocalService`, permitindo substituir o armazenamento temporário pelo serviço persistente na Etapa 5 sem alterar os formulários.
-- As telas recebem suas dependências por construtor (`required this.authViewModel` e `required this.documentosViewModel`). O `main.dart` instancia os ViewModels uma vez e os injeta nas telas.
-- As rotas nomeadas em `MaterialApp` são `/` (Login), `/cadastro` (Cadastro) e `/home` (Home). A quarta rota `/editor` será adicionada na Fase 2.
-- Os controladores `TextEditingController` e a `GlobalKey<FormState>` permanecem nas Views porque pertencem à interface, não às regras de negócio.
+O código foi organizado em camadas com imports relativos entre arquivos `lib/`. Os construtores das telas recebem ViewModels e `AuthViewModel` recebe o serviço de usuários. As classes passaram a possuir responsabilidades definidas, getters públicos e estado privado. As rotas nomeadas `/`, `/cadastro` e `/home` foram configuradas no `MaterialApp` da Fase 1. Os validadores foram extraídos para `lib/utils/validadores.dart`. `TextEditingController` e `GlobalKey<FormState>` permanecem nas Views, pois são detalhes da interface.
 
-## 3. Gerenciamento de estado e comunicação reativa
+## 3. Estado antes do CRUD
 
-- **Nenhum `setState()` é utilizado nas três Views.** Login e Cadastro não atualizam diretamente o estado de autenticação: chamam `entrar()` e `cadastrar()` do `AuthViewModel`.
-- `AuthViewModel` herda de `ChangeNotifier` e guarda `_usuarioAtual`, `_carregando`, `_erro` e `_temaEscuro` com acesso externo por getters. `DocumentosViewModel` expõe a lista de demonstração de forma não modificável.
-- Os métodos do ViewModel chamam `notifyListeners()` sempre que o estado muda. `ListenableBuilder` reconstrói os trechos relevantes do Login, Cadastro, Home e `MaterialApp`, inclusive ao alternar o tema.
-- A navegação continua a cargo das Views com `Navigator.pushNamed`, `Navigator.pop` e `Navigator.pushNamedAndRemoveUntil`, enquanto a decisão de autenticar ou rejeitar o acesso pertence ao ViewModel.
-- O `BancoLocalService` da Fase 1 mantém usuários apenas em memória. **Não existe persistência de cadastro, de sessão ou de documentos nesta entrega**; esses recursos integram a Etapa 5.
+Não há `setState()` nas Views. `AuthViewModel extends ChangeNotifier` mantém `_usuarioAtual`, `_carregando`, `_erro` e `_temaEscuro`; `DocumentosViewModel` expõe dados da lista demonstrativa. Os ViewModels chamam `notifyListeners()` e as Views usam `ListenableBuilder`. O `main.dart` também ouve o ViewModel para atualizar `ThemeMode`.
 
-## 4. Evidências de homologação a registrar no Codespaces
+## 4. Extensões posteriores (Fase 2)
 
-Os testes abaixo devem ser efetivamente executados pelo estudante. Marque somente após confirmar o resultado:
+**Somente depois do commit da Fase 1:** `BancoLocalService` passou a persistir contas no navegador, `PreferencesService` passou a gravar tema e sessão, `DocumentoStorageService` foi criado para serialização JSON e CRUD; `DocumentosViewModel` passou a gerenciar lista e operações assíncronas; `EditorView` foi implementada e a rota `/editor` adicionada.
 
-- [ ] `flutter pub get` sem erros
-- [ ] `flutter analyze` sem erros
-- [ ] `flutter test` com os testes passando
-- [ ] F5 abre preview na porta 8080
-- [ ] Login → Cadastro → Login → Home → Sair
-- [ ] Campos vazios, e-mail inválido e senha curta são rejeitados
-- [ ] E-mail duplicado é rejeitado
-- [ ] Tema alterna sem `setState` nas Views
-- [ ] Commit e push da **Fase 1** realizados antes da Fase 2
+## 5. Evidências
 
-**Observação:** a execução real no GitHub Codespaces não foi realizada nesta geração de arquivos. Inclua prints ou evidências reais após testar.
+- [ ] Registrar hash/link do commit da Fase 1
+- [ ] Registrar prints do F5 e dos três formulários/navegação
+- [ ] Registrar resultado do `flutter analyze` e `flutter test`
+- [ ] Registrar segundo commit com CRUD e persistência
+
+Não há alegação de testes executados no Codespaces sem a execução real.

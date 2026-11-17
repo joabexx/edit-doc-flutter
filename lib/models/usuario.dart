@@ -1,9 +1,31 @@
 class Usuario {
-  const Usuario({required this.id, required this.nome, required this.email, required this.senha});
+  const Usuario({
+    required this.id,
+    required this.nome,
+    required this.email,
+    required this.senhaHash,
+    required this.salt,
+  });
 
   final String id;
   final String nome;
   final String email;
-  // Senha somente em memória nesta fase didática. Nunca use texto puro em produção.
-  final String senha;
+  final String senhaHash;
+  final String salt;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'nome': nome,
+    'email': email,
+    'senhaHash': senhaHash,
+    'salt': salt,
+  };
+
+  factory Usuario.fromJson(Map<String, dynamic> json) => Usuario(
+    id: json['id'] as String,
+    nome: json['nome'] as String,
+    email: json['email'] as String,
+    senhaHash: json['senhaHash'] as String,
+    salt: json['salt'] as String,
+  );
 }

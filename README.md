@@ -1,37 +1,51 @@
-# Edit Doc Flutter — Fase 1: arquitetura MVVM
+# Edit Doc Flutter — Fase 2: CRUD e persistência local
 
-Referência didática para a migração das três telas (**Login, Cadastro e Home/Lista**) para MVVM. Esta versão **ainda não contém CRUD persistente**; serve para o primeiro commit e a primeira entrega exigida pelo professor.
+Aplicação didática Flutter Web que implementa **Model–View–ViewModel (MVVM)** com quatro telas: Login (`/`), Cadastro (`/cadastro`), Home/Lista (`/home`) e Editor (`/editor`).
 
-## Como montar no repositório do GitHub Codespaces
+## Execução no GitHub Codespaces
 
-1. No GitHub, crie o repositório público `edit-doc-flutter`, marcando **Add a README file**.
-2. **Antes de criar o Codespace**, adicione ao repositório os arquivos `.devcontainer/devcontainer.json` e `.vscode/launch.json` incluídos neste ZIP, usando o editor `github.dev`, e faça commit. Isso garante que o Codespace comece com a imagem que contém o Flutter SDK.
-3. No GitHub, abra **Code → Codespaces → Create codespace on main**. No terminal do Codespace, execute `flutter create . --project-name edit_doc_flutter`.
-4. Copie **todo o conteúdo deste ZIP** para a raiz do repositório, preservando as pastas ocultas `.devcontainer/` e `.vscode/` e substituindo arquivos de mesmo nome (sem substituir a pasta `.git/`). Se usar terminal, pode extrair o ZIP diretamente na raiz.
-5. Execute `flutter pub get`, `flutter analyze` e `flutter test`.
-6. Pressione F5 com **Rodar App Flutter (Web Preview)**; o servidor web será exposto na porta 8080.
-7. Faça o teste: Cadastre um usuário (e-mail válido, senha com 6+ caracteres), volte e faça o login, confira a Home, o tema e o logout.
-8. Confira e adapte `ARQUITETURA.md` ao código original do seu DartPad. Registre as evidências reais dos testes.
-9. Execute os comandos abaixo e **entregue o link desta revisão no Blackboard antes de aplicar a Fase 2**.
+**Pré-requisito acadêmico:** envie e registre o commit da **Fase 1** com seu `ARQUITETURA.md` antes de aplicar a Fase 2.
+
+1. No Codespace do repositório `edit-doc-flutter`, use a mesma branch `main`.
+2. Use o Codespace já criado com a configuração `.devcontainer` da Fase 1. Se ainda não gerou a infraestrutura Flutter, execute `flutter create . --project-name edit_doc_flutter`.
+3. Extraia este ZIP **sobre a versão da Fase 1**, substituindo os arquivos de mesmo nome e preservando a pasta `.git/` do repositório.
+4. Execute `flutter pub get`, `flutter analyze` e `flutter test`.
+5. Pressione F5 para abrir o servidor web na porta 8080 (configuração de `.vscode/launch.json`).
+6. Cadastre-se, faça login, crie um documento, edite-o, exclua outro documento, alterne o tema e recarregue o preview para confirmar a persistência.
+7. Faça o commit e push da Fase 2:
 
 ```bash
 git add .
-git commit -m "Fase 1 - migracao MVVM e relatorio de arquitetura"
+git commit -m "Fase 2 - CRUD de documentos e persistencia local"
 git push origin main
 ```
 
-**Se o Codespace tiver sido criado antes dos arquivos `.devcontainer`, reconstrua o container (Command Palette → Dev Containers: Rebuild Container) ou crie um novo Codespace após o commit da configuração.**
+## Arquitetura
 
-**Importante:** os cadastros são temporários nesta Fase 1 e desaparecem ao reiniciar a página.
+- **Model:** `Usuario`, `Documento` e seus métodos de serialização JSON.
+- **Services:** `BancoLocalService` (usuários), `PreferencesService` (tema/sessão) e `DocumentoStorageService` (CRUD dos documentos). Todos os dados persistentes são locais ao navegador via `shared_preferences`.
+- **ViewModel:** `AuthViewModel` e `DocumentosViewModel`, ambos com `ChangeNotifier`, regras e estados encapsulados.
+- **View:** telas de Login, Cadastro, Home e Editor, que usam `ListenableBuilder` e chamam o ViewModel, sem `setState()`.
+- **Utils:** `Validadores` centraliza validações.
 
-## Estrutura
+## Quadro de testes manuais (registre evidências reais)
 
-`lib/main.dart` configura rotas e tema reativo. `lib/models` guarda entidades/serviços; `lib/viewmodels` concentra as regras e estado com `ChangeNotifier`; `lib/views` guarda os widgets; `lib/utils` centraliza validadores.
+- [ ] Cadastro com nome/e-mail/senha válidos
+- [ ] Rejeição de cadastro duplicado, e-mail inválido e senha curta
+- [ ] Login correto, login incorreto e sair
+- [ ] Criar documento e aparecer na lista
+- [ ] Abrir, editar e salvar documento
+- [ ] Excluir documento com confirmação
+- [ ] Recarregar a página e manter documentos e sessão
+- [ ] Recarregar a página e manter tema claro/escuro
+- [ ] Entrar com segundo usuário e não enxergar documentos do primeiro
+- [ ] `flutter analyze` sem erros
+- [ ] `flutter test` com testes aprovados
 
-## Observação sobre a configuração de depuração
+## Limitações e segurança
 
-O enunciado usa `"args"` em `.vscode/launch.json`. O arquivo entregue usa `"toolArgs"` para encaminhar `-d web-server`, `--web-port` e `--web-hostname` à ferramenta Flutter, e não ao método `main()` da aplicação. Se o professor exigir a reprodução literal, confira com ele essa diferença técnica.
+`shared_preferences` no alvo Web utiliza armazenamento do navegador, não um banco remoto: os dados não são sincronizados entre dispositivos nem protegidos contra usuários que tenham acesso ao perfil/navegador. O protótipo guarda contas localmente com SHA-256 e sal aleatório, apenas com finalidade didática. **Isso não constitui autenticação segura**: para uma aplicação real, use backend, autenticação no servidor, armazenamento seguro, hash de senha apropriado (Argon2id/bcrypt/scrypt) e medidas de autorização. Não utilize senhas reais nem documentos sensíveis neste protótipo.
 
-## Limitação da referência
+O arquivo `.vscode/launch.json` usa `toolArgs` para passar parâmetros ao comando Flutter. O enunciado traz `args`, mas essa opção costuma encaminhar parâmetros à aplicação em vez de configurar `flutter run`.
 
-Sem o código original do DartPad, não é possível assegurar equivalência visual e funcional exata com o protótipo já criado. A organização entregue funciona como base de referência a ser conferida/adaptada.
+**Ao concluir:** visite https://github.com/codespaces, selecione o Codespace e use **Stop** para não consumir horas desnecessárias.
